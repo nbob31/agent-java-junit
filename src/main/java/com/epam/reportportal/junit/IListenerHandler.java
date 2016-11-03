@@ -140,4 +140,13 @@ public interface IListenerHandler {
 	 * @param failure
 	 */
 	void sendReportPortalMsg(Failure failure);
+
+	void startTest(Description description);
+
+	void finishTest(Description description, String passed);
+
+	void sendFailureMessage(Failure failure);
+
+	void finishLaunch();
+
 }

@@ -24,6 +24,7 @@ import static com.epam.reportportal.listeners.ListenersUtils.handleException;
 
 import java.lang.reflect.Method;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
@@ -35,8 +36,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.epam.reportportal.listeners.ListenerParameters;
+import com.epam.reportportal.listeners.ListenersUtils;
 import com.epam.reportportal.listeners.ReportPortalListenerContext;
 import com.epam.reportportal.listeners.Statuses;
+import com.epam.reportportal.restclient.endpoint.exception.RestEndpointIOException;
 import com.epam.reportportal.service.BatchedReportPortalService;
 import com.epam.ta.reportportal.ws.model.EntryCreatedRS;
 import com.epam.ta.reportportal.ws.model.FinishExecutionRQ;
@@ -59,7 +62,6 @@ import com.google.inject.Inject;
  * @author Aliaksey_Makayed (modified by Andrei_Ramanchuk)
  */
 public class ParallelRunningHandler implements IListenerHandler {
-	public final static String API_BASE = "/reportportal-ws/api/v1";
 
 	private final Logger logger = LoggerFactory.getLogger(ParallelRunningHandler.class);
 
@@ -72,9 +74,13 @@ public class ParallelRunningHandler implements IListenerHandler {
 	private String launchName = "test_launch";
 	private Set<String> tags;
 	private Mode launchRunningMode;
+	private String launchId;
 
 	private List<Class<?>> suites = new ArrayList<Class<?>>();
 	private List<Class<?>> tests = new ArrayList<Class<?>>();
+
+	private Map<String, String> runningSteps;
+	private Map<String, String> runningTests;
 
 	@Inject
 	public ParallelRunningHandler(ListenerParameters parameters, SuitesKeeper suitesKeeper, ParallelRunningContext parallelRunningContext,
@@ -85,6 +91,8 @@ public class ParallelRunningHandler implements IListenerHandler {
 		this.processor = suitesKeeper;
 		this.context = parallelRunningContext;
 		this.reportPortalService = reportPortalService;
+		this.runningSteps = new ConcurrentHashMap<String, String>();
+		this.runningTests = new ConcurrentHashMap<String, String>();
 	}
 
 	@Override
@@ -97,6 +105,7 @@ public class ParallelRunningHandler implements IListenerHandler {
 		EntryCreatedRS rs = null;
 		try {
 			rs = reportPortalService.startLaunch(startLaunchRQ);
+			launchId = rs.getId();
 			context.setLaunchId(rs.getId());
 		} catch (Exception e) {
 			handleException(e, logger, "Unable start the launch: '" + launchName + "'");
@@ -234,6 +243,20 @@ public class ParallelRunningHandler implements IListenerHandler {
 	}
 
 	@Override
+	public void finishLaunch() {
+		finishRunningTestClasses();
+		if (!Strings.isNullOrEmpty(launchId)) {
+			FinishExecutionRQ finishExecutionRQ = new FinishExecutionRQ();
+			finishExecutionRQ.setEndTime(new Date());
+			try {
+				reportPortalService.finishLaunch(launchId, finishExecutionRQ);
+			} catch (RestEndpointIOException e) {
+				ListenersUtils.handleException(e, logger, "Unable to finish the launch: " + launchName);
+			}
+		}
+	}
+
+	@Override
 	public void starTestIfRequired(Description currentTest) {
 		if (context.getRunningTestId(currentTest.getTestClass()) == null) {
 			StartTestItemRQ rq = new StartTestItemRQ();
@@ -315,6 +338,94 @@ public class ParallelRunningHandler implements IListenerHandler {
 		}
 	}
 
+	@Override
+	public void startTest(Description description) {
+		if (!runningTests.containsKey(description.getClassName())) {
+			startTestClass(description);
+		}
+		if (description.getChildren().isEmpty()) {
+			startMethod(description);
+		}
+	}
+
+	@Override
+	public void finishTest(Description description, String status) {
+		final String runningStep = runningSteps.get(description.getDisplayName());
+		if (runningStep != null) {
+			runningSteps.remove(description.getDisplayName());
+			try {
+				FinishTestItemRQ rq = new FinishTestItemRQ();
+				rq.setEndTime(new Date());
+				rq.setStatus(status);
+				reportPortalService.finishTestItem(runningStep, rq);
+				ReportPortalListenerContext.setRunningNowItemId(null);
+			} catch (RestEndpointIOException e) {
+				ListenersUtils.handleException(e, logger,
+						"Unable to finish method: " + description.getClassName() + "." + description.getMethodName());
+			}
+		}
+	}
+
+	@Override
+	public void sendFailureMessage(Failure failure) {
+		final SaveLogRQ rq = new SaveLogRQ();
+		rq.setLogTime(new Date());
+		rq.setLevel("ERROR");
+		rq.setMessage("Exception: " + failure.getException().getMessage() + System.getProperty("line.separator")
+				+ this.getStackTraceString(failure.getException()));
+		final String testItemId = runningSteps.get(failure.getDescription().getDisplayName());
+		rq.setTestItemId(testItemId);
+		try {
+			reportPortalService.log(rq);
+		} catch (RestEndpointIOException e) {
+			ListenersUtils.handleException(e, logger, "Unable to send error message");
+		}
+	}
+
+	private void startTestClass(Description description) {
+		String className = description.getClassName();
+		try {
+			StartTestItemRQ rq = new StartTestItemRQ();
+			rq.setLaunchId(launchId);
+			rq.setName(className);
+			rq.setType("TEST");
+			rq.setStartTime(new Date());
+			final EntryCreatedRS entryCreatedRS = reportPortalService.startRootTestItem(rq);
+			runningTests.put(className, entryCreatedRS.getId());
+		} catch (RestEndpointIOException e) {
+			ListenersUtils.handleException(e, logger, "Unable to start test class: " + className);
+		}
+	}
+
+	private void finishRunningTestClasses() {
+		for (String value : runningTests.values()) {
+			FinishTestItemRQ rq = new FinishTestItemRQ();
+			rq.setEndTime(new Date());
+			try {
+				reportPortalService.finishTestItem(value, rq);
+			} catch (RestEndpointIOException e) {
+				ListenersUtils.handleException(e, logger, "Unable to finish test class: " + e.getMessage());
+			}
+		}
+	}
+
+	private void startMethod(Description description) {
+		String className = description.getClassName();
+		String displayName = description.getDisplayName();
+		try {
+			final StartTestItemRQ rq = new StartTestItemRQ();
+			rq.setLaunchId(launchId);
+			rq.setName(description.getMethodName());
+			rq.setStartTime(new Date());
+			rq.setType("STEP");
+			final EntryCreatedRS entryCreatedRS = reportPortalService.startTestItem(runningTests.get(className), rq);
+			ReportPortalListenerContext.setRunningNowItemId(entryCreatedRS.getId());
+			runningSteps.put(displayName, entryCreatedRS.getId());
+		} catch (RestEndpointIOException e) {
+			ListenersUtils.handleException(e, logger, "Unable to start method: " + className + "." + description.getMethodName());
+		}
+	}
+
 	private String getStackTraceString(Throwable e) {
 		StringBuilder result = new StringBuilder();
 		for (int i = 0; i < e.getStackTrace().length; i++) {
@@ -326,7 +437,7 @@ public class ParallelRunningHandler implements IListenerHandler {
 
 	/**
 	 * get all methods annotated as test
-	 * 
+	 *
 	 * @param methods
 	 * @return
 	 */
@@ -375,7 +486,7 @@ public class ParallelRunningHandler implements IListenerHandler {
 
 	/**
 	 * Close all TEST-items and SUITE-items before LAUNCH-item finish
-	 * 
+	 *
 	 * @throws RestEndpointIOException
 	 */
 	private void stopOverAll() {
