@@ -20,10 +20,7 @@ import com.epam.reportportal.listeners.ListenerParameters;
 import com.epam.reportportal.listeners.Statuses;
 import com.epam.reportportal.service.Launch;
 import com.epam.reportportal.service.ReportPortal;
-import com.epam.ta.reportportal.ws.model.FinishExecutionRQ;
-import com.epam.ta.reportportal.ws.model.FinishTestItemRQ;
-import com.epam.ta.reportportal.ws.model.ParameterResource;
-import com.epam.ta.reportportal.ws.model.StartTestItemRQ;
+import com.epam.ta.reportportal.ws.model.*;
 import com.epam.ta.reportportal.ws.model.issue.Issue;
 import com.epam.ta.reportportal.ws.model.launch.StartLaunchRQ;
 import com.epam.ta.reportportal.ws.model.log.SaveLogRQ;
@@ -32,28 +29,17 @@ import com.nordstrom.automation.junit.ArtifactParams;
 import com.nordstrom.automation.junit.LifecycleHooks;
 import com.nordstrom.automation.junit.RetriedTest;
 import io.reactivex.Maybe;
+import org.junit.*;
+import org.junit.runners.Suite;
+import org.junit.runners.model.FrameworkMethod;
+import org.junit.runners.model.TestClass;
 import rp.com.google.common.annotations.VisibleForTesting;
 import rp.com.google.common.base.Function;
 import rp.com.google.common.base.Supplier;
 
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runners.Suite;
-import org.junit.runners.model.FrameworkMethod;
-import org.junit.runners.model.TestClass;
-
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Objects;
-import java.util.Optional;
 
 import static rp.com.google.common.base.Optional.fromNullable;
 import static rp.com.google.common.base.Strings.isNullOrEmpty;
@@ -70,6 +56,8 @@ import static rp.com.google.common.base.Throwables.getStackTraceAsString;
 public class ParallelRunningHandler implements IListenerHandler {
 	
 	public static final String API_BASE = "/reportportal-ws/api/v1";
+
+	private static final String SKIPPED_ISSUE_KEY = "skippedIssue";
 
 	private ParallelRunningContext context;
 	private MemoizingSupplier<Launch> launch;
@@ -122,8 +110,8 @@ public class ParallelRunningHandler implements IListenerHandler {
 		} else {
 			rq = buildStartTestItemRq(runner);
 		}
-		Maybe<String> containerId = getContainerId(runner);
-		Maybe<String> itemId;
+		Maybe<Long> containerId = getContainerId(runner);
+		Maybe<Long> itemId;
 		if (containerId == null) {
 			itemId = launch.get().startTestItem(rq);
 		} else {
@@ -148,7 +136,7 @@ public class ParallelRunningHandler implements IListenerHandler {
 	public void startTestMethod(FrameworkMethod method, Object runner) {
 		StartTestItemRQ rq = buildStartStepRq(method);
 		rq.setParameters(createStepParameters(method, runner));
-		Maybe<String> itemId = launch.get().startTestItem(context.getItemIdOfTestRunner(runner), rq);
+		Maybe<Long> itemId = launch.get().startTestItem(context.getItemIdOfTestRunner(runner), rq);
 		context.setItemIdOfTestMethod(method, runner, itemId);
 	}
 
@@ -176,7 +164,7 @@ public class ParallelRunningHandler implements IListenerHandler {
 	@Override
 	public void handleTestSkip(FrameworkMethod method, Object runner) {
 		StartTestItemRQ startRQ = buildStartStepRq(method);
-		Maybe<String> itemId = launch.get().startTestItem(context.getItemIdOfTestRunner(runner), startRQ);
+		Maybe<Long> itemId = launch.get().startTestItem(context.getItemIdOfTestRunner(runner), startRQ);
 		FinishTestItemRQ finishRQ = buildFinishStepRq(method, Statuses.SKIPPED);
 		launch.get().finishTestItem(itemId, finishRQ);
 	}
@@ -186,7 +174,7 @@ public class ParallelRunningHandler implements IListenerHandler {
 	 */
 	@Override
 	public void sendReportPortalMsg(final FrameworkMethod method, Object runner, final Throwable thrown) {
-		Function<String, SaveLogRQ> function = itemId -> {
+		Function<Long, SaveLogRQ> function = itemId -> {
 			SaveLogRQ rq = new SaveLogRQ();
 			rq.setTestItemId(itemId);
 			rq.setLevel("ERROR");
@@ -238,7 +226,7 @@ public class ParallelRunningHandler implements IListenerHandler {
 	 * @param runner JUnit test runner
 	 * @return container ID for the indicated test item; {@code null} for root test items
 	 */
-	private Maybe<String> getContainerId(Object runner) {
+	private Maybe<Long> getContainerId(Object runner) {
 		Object parent = LifecycleHooks.getParentOf(runner);
 		// if not root object
 		if (parent != null) {
@@ -257,11 +245,18 @@ public class ParallelRunningHandler implements IListenerHandler {
 		StartLaunchRQ rq = new StartLaunchRQ();
 		rq.setName(parameters.getLaunchName());
 		rq.setStartTime(Calendar.getInstance().getTime());
-		rq.setTags(parameters.getTags());
+		rq.setAttributes(parameters.getAttributes() == null ? new HashSet<>() : parameters.getAttributes());
 		rq.setMode(parameters.getLaunchRunningMode());
 		if (!isNullOrEmpty(parameters.getDescription())) {
 			rq.setDescription(parameters.getDescription());
 		}
+
+		final ItemAttributeResource skippedIssueAttr = new ItemAttributeResource();
+		skippedIssueAttr.setKey(SKIPPED_ISSUE_KEY);
+		skippedIssueAttr.setValue(parameters.getSkippedAnIssue() == null ? "true" : parameters.getSkippedAnIssue().toString());
+		skippedIssueAttr.setSystem(true);
+		rq.getAttributes().add(skippedIssueAttr);
+
 		return rq;
 	}
 

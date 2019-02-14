@@ -15,13 +15,12 @@
  */
 package com.epam.reportportal.junit;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import com.nordstrom.automation.junit.RunReflectiveCall;
+import io.reactivex.Maybe;
 import org.junit.runners.model.FrameworkMethod;
 
-import com.nordstrom.automation.junit.RunReflectiveCall;
-
-import io.reactivex.Maybe;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Parallel execution context and set of operations to interact with it
@@ -29,10 +28,10 @@ import io.reactivex.Maybe;
 public class ParallelRunningContext {
 
 	/** {@code ParentRunner} object => RP test item ID */
-	private final Map<Object, Maybe<String>> itemIdOfTestRunner;
+	private final Map<Object, Maybe<Long>> itemIdOfTestRunner;
 	
 	/** hash of runner/method pair => RP test item ID */
-	private final Map<Integer, Maybe<String>> itemIdOfTestMethod;
+	private final Map<Integer, Maybe<Long>> itemIdOfTestMethod;
 	
 	/** hash of runner/method pair => status */
 	private final Map<Integer, String> statusOfTestMethod;
@@ -49,7 +48,7 @@ public class ParallelRunningContext {
 	 * @param runner JUnit test runner
 	 * @param itemId Report Portal test item ID for container object
 	 */
-	public void setTestIdOfTestRunner(Object runner, Maybe<String> itemId) {
+	public void setTestIdOfTestRunner(Object runner, Maybe<Long> itemId) {
 		itemIdOfTestRunner.put(runner, itemId);
 	}
 
@@ -59,7 +58,7 @@ public class ParallelRunningContext {
 	 * @param runner JUnit test runner
 	 * @return Report Portal test item ID for container object
 	 */
-	public Maybe<String> getItemIdOfTestRunner(Object runner) {
+	public Maybe<Long> getItemIdOfTestRunner(Object runner) {
 		return itemIdOfTestRunner.get(runner);
 	}
 
@@ -70,7 +69,7 @@ public class ParallelRunningContext {
 	 * @param runner JUnit test runner
 	 * @param itemId Report Portal test item ID for test method
 	 */
-	public void setItemIdOfTestMethod(FrameworkMethod method, Object runner, Maybe<String> itemId) {
+	public void setItemIdOfTestMethod(FrameworkMethod method, Object runner, Maybe<Long> itemId) {
 		itemIdOfTestMethod.put(RunReflectiveCall.methodHash(runner, method), itemId);
 	}
 
@@ -81,7 +80,7 @@ public class ParallelRunningContext {
 	 * @param runner JUnit test runner
 	 * @return Report Portal test item ID for test method
 	 */
-	public Maybe<String> getItemIdOfTestMethod(FrameworkMethod method, Object runner) {
+	public Maybe<Long> getItemIdOfTestMethod(FrameworkMethod method, Object runner) {
 		return itemIdOfTestMethod.get(RunReflectiveCall.methodHash(runner, method));
 	}
 

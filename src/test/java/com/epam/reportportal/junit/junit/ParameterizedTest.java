@@ -1,12 +1,8 @@
 package com.epam.reportportal.junit.junit;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static com.nordstrom.automation.junit.ArtifactParams.param;
-
-import java.util.Map;
-import java.util.Optional;
-
+import com.nordstrom.automation.junit.ArtifactParams;
+import com.nordstrom.automation.junit.AtomIdentity;
+import com.nordstrom.common.params.Params;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.Description;
@@ -14,8 +10,11 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
-import com.nordstrom.automation.junit.ArtifactParams;
-import com.nordstrom.automation.junit.AtomIdentity;
+import java.util.Map;
+import java.util.Optional;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 @RunWith(Parameterized.class)
 public class ParameterizedTest implements ArtifactParams {
@@ -41,7 +40,7 @@ public class ParameterizedTest implements ArtifactParams {
 
     @Override
     public Optional<Map<String, Object>> getParameters() {
-        return ArtifactParams.mapOf(param("input", input));
+        return ArtifactParams.mapOf(Params.param("input", input));
     }
     
     @Test

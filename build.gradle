@@ -18,8 +18,8 @@ repositories {
     maven { url "http://dl.bintray.com/epam/reportportal" }
 }
 dependencies {
-    compile 'com.epam.reportportal:client-java:4.0.9'
-    compile 'com.epam.reportportal:commons-model:4.2.0'
+    compile 'com.github.reportportal:client-java:540f524'
+    compile 'com.github.reportportal:commons-model:1a28423'
     compile 'com.nordstrom.tools:junit-foundation:9.1.0'
     compile 'com.google.inject:guice:4.1.0'
 }
