@@ -24,9 +24,8 @@ import com.google.inject.Injector;
  * JUnit provider injector is the child injector of
  * {@link com.epam.ta.reportportal.guice.Injector} with JUnits's specific
  * modules
- * 
+ *
  * @author Ilya_Koshaleu
- * 
  */
 public class JUnitInjectorProvider {
 

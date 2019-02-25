@@ -15,13 +15,13 @@
  */
 package com.epam.reportportal.junit;
 
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
-
 import com.epam.reportportal.service.ReportPortal;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
+
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 
 /**
  * @author Dzmitry_Kavalets
@@ -32,7 +32,7 @@ public class JUnitProvider implements Provider<IListenerHandler> {
 	private ParallelRunningContext parallelRunningContext;
 
 	private ReportPortal reportPortalService;
-	
+
 	@Inject
 	public void setReportPortalService() {
 		this.reportPortalService = ReportPortal.builder().build();
@@ -46,11 +46,13 @@ public class JUnitProvider implements Provider<IListenerHandler> {
 		}
 
 		return (IListenerHandler) Proxy.newProxyInstance(this.getClass().getClassLoader(),
-				new Class[] { IListenerHandler.class }, new InvocationHandler() {
+				new Class[] { IListenerHandler.class },
+				new InvocationHandler() {
 					@Override
 					public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
 						return null;
 					}
-				});
+				}
+		);
 	}
 }

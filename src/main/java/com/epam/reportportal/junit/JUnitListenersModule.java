@@ -19,9 +19,8 @@ import com.google.inject.AbstractModule;
 
 /**
  * Guice module with JUnit beans.
- * 
+ *
  * @author Ilya_Koshaleu
- * 
  */
 public class JUnitListenersModule extends AbstractModule {
 

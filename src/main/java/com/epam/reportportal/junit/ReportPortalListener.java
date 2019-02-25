@@ -16,12 +16,8 @@
 package com.epam.reportportal.junit;
 
 import com.epam.reportportal.listeners.Statuses;
-import com.nordstrom.automation.junit.AtomicTest;
-import com.nordstrom.automation.junit.MethodWatcher;
-import com.nordstrom.automation.junit.RunWatcher;
-import com.nordstrom.automation.junit.RunnerWatcher;
-import com.nordstrom.automation.junit.ShutdownListener;
-
+import com.nordstrom.automation.junit.*;
+import org.junit.Test;
 import org.junit.internal.AssumptionViolatedException;
 import org.junit.runners.Suite;
 import org.junit.runners.model.FrameworkMethod;
@@ -42,7 +38,7 @@ public class ReportPortalListener implements ShutdownListener, RunnerWatcher, Ru
 		handler = JUnitInjectorProvider.getInstance().getInstance(IListenerHandler.class);
 		handler.startLaunch();
 	}
-	
+
 	/**
 	 * {@inheritDoc}
 	 */
@@ -61,13 +57,13 @@ public class ReportPortalListener implements ShutdownListener, RunnerWatcher, Ru
 	public void runFinished(Object runner) {
 		handler.stopRunner(runner);
 	}
-	
+
 	/**
 	 * {@inheritDoc}
 	 */
 	@Override
 	public void testStarted(AtomicTest atomicTest) {
-		// we're not tracking "atomic" tests, so nothing to do here
+		handler.startTestMethod(atomicTest.getIdentity(), atomicTest.getRunner());
 	}
 
 	/**
@@ -75,7 +71,7 @@ public class ReportPortalListener implements ShutdownListener, RunnerWatcher, Ru
 	 */
 	@Override
 	public void testFinished(AtomicTest atomicTest) {
-		// we're not tracking "atomic" tests, so nothing to do here
+		handler.stopTestMethod(atomicTest.getIdentity(), atomicTest.getRunner());
 	}
 
 	/**
@@ -83,7 +79,7 @@ public class ReportPortalListener implements ShutdownListener, RunnerWatcher, Ru
 	 */
 	@Override
 	public void testFailure(AtomicTest atomicTest, Throwable thrown) {
-		// This is the failure of the "atomic" method. The failure of the "particle" has already been reported.
+		reportTestFailure(atomicTest.getIdentity(), atomicTest.getRunner(), thrown);
 	}
 
 	/**
@@ -91,9 +87,9 @@ public class ReportPortalListener implements ShutdownListener, RunnerWatcher, Ru
 	 */
 	@Override
 	public void testAssumptionFailure(AtomicTest atomicTest, AssumptionViolatedException thrown) {
-		// This is the failure of the "atomic" method. The failure of the "particle" has already been reported.
+		reportTestFailure(atomicTest.getIdentity(), atomicTest.getRunner(), thrown);
 	}
-	
+
 	/**
 	 * {@inheritDoc}
 	 */
@@ -101,13 +97,13 @@ public class ReportPortalListener implements ShutdownListener, RunnerWatcher, Ru
 	public void testIgnored(AtomicTest atomicTest) {
 		handler.handleTestSkip(atomicTest.getIdentity(), atomicTest.getRunner());
 	}
-	
+
 	/**
 	 * {@inheritDoc}
 	 */
 	@Override
 	public void beforeInvocation(Object runner, Object target, FrameworkMethod method, Object... params) {
-		if (handler.isReportable(method)) {
+		if (null == method.getAnnotation(Test.class) && handler.isReportable(method)) {
 			handler.startTestMethod(method, runner);
 		}
 	}
@@ -117,18 +113,27 @@ public class ReportPortalListener implements ShutdownListener, RunnerWatcher, Ru
 	 */
 	@Override
 	public void afterInvocation(Object runner, Object target, FrameworkMethod method, Throwable thrown) {
-		if (handler.isReportable(method)) {
+		if (null == method.getAnnotation(Test.class) && handler.isReportable(method)) {
 			if (thrown != null) {
-				reportTestFailure(method, runner, thrown);
+				Class<? extends Throwable> expected = Test.None.class;
+
+				if (target != null) {
+					AtomicTest atomicTest = LifecycleHooks.getAtomicTestOf(runner);
+					Test annotation = atomicTest.getIdentity().getAnnotation(Test.class);
+					expected = annotation.expected();
+
+					if (!expected.isInstance(thrown)) {
+						reportTestFailure(method, runner, thrown);
+					}
+				}
 			}
-			
 			handler.stopTestMethod(method, runner);
 		}
 	}
 
 	/**
 	 * Report failure of the indicated "particle" method.
-	 * 
+	 *
 	 * @param method {@link FrameworkMethod} object for the "particle" method
 	 * @throws RestEndpointIOException is something goes wrong
 	 */

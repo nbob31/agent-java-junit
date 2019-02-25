@@ -27,13 +27,19 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class ParallelRunningContext {
 
-	/** {@code ParentRunner} object => RP test item ID */
+	/**
+	 * {@code ParentRunner} object => RP test item ID
+	 */
 	private final Map<Object, Maybe<Long>> itemIdOfTestRunner;
-	
-	/** hash of runner/method pair => RP test item ID */
+
+	/**
+	 * hash of runner/method pair => RP test item ID
+	 */
 	private final Map<Integer, Maybe<Long>> itemIdOfTestMethod;
-	
-	/** hash of runner/method pair => status */
+
+	/**
+	 * hash of runner/method pair => status
+	 */
 	private final Map<Integer, String> statusOfTestMethod;
 
 	public ParallelRunningContext() {
@@ -44,7 +50,7 @@ public class ParallelRunningContext {
 
 	/**
 	 * Set the test item ID for the indicated container object (test or suite).
-	 * 
+	 *
 	 * @param runner JUnit test runner
 	 * @param itemId Report Portal test item ID for container object
 	 */
@@ -54,7 +60,7 @@ public class ParallelRunningContext {
 
 	/**
 	 * Get the test item ID for the indicated container object (test or suite).
-	 * 
+	 *
 	 * @param runner JUnit test runner
 	 * @return Report Portal test item ID for container object
 	 */
@@ -64,7 +70,7 @@ public class ParallelRunningContext {
 
 	/**
 	 * Set the test item ID for the specified test method.
-	 * 
+	 *
 	 * @param method {@link FrameworkMethod} object for test method
 	 * @param runner JUnit test runner
 	 * @param itemId Report Portal test item ID for test method
@@ -75,7 +81,7 @@ public class ParallelRunningContext {
 
 	/**
 	 * Get the test item ID for the specified test method.
-	 * 
+	 *
 	 * @param method {@link FrameworkMethod} object for test method
 	 * @param runner JUnit test runner
 	 * @return Report Portal test item ID for test method
@@ -86,7 +92,7 @@ public class ParallelRunningContext {
 
 	/**
 	 * Set the status for the specified test method.
-	 * 
+	 *
 	 * @param method {@link FrameworkMethod} object for test method
 	 * @param runner JUnit test runner
 	 * @param status status for test method
@@ -97,7 +103,7 @@ public class ParallelRunningContext {
 
 	/**
 	 * Get the status for the specified test method.
-	 * 
+	 *
 	 * @param method {@link FrameworkMethod} object for test method
 	 * @param runner JUnit test runner
 	 * @return status for test method
