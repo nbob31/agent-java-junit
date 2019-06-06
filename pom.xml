@@ -36,9 +36,9 @@
             <version>4.2.0</version>
         </dependency>
         <dependency>
-            <groupId>com.nordstrom.tools</groupId>
-            <artifactId>junit-foundation</artifactId>
-            <version>9.4.3</version>
+            <groupId>com.github.Nordstrom</groupId>
+            <artifactId>JUnit-Foundation</artifactId>
+            <version>pr~fix-npe-SNAPSHOT</version>
         </dependency>
         <dependency>
         	<groupId>com.google.inject</groupId>
