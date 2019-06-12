@@ -70,15 +70,12 @@ import static rp.com.google.common.base.Throwables.getStackTraceAsString;
  */
 public class ParallelRunningHandler implements IListenerHandler {
 
-	public static final String API_BASE = "/reportportal-ws/api/v1";
-
 	private ParallelRunningContext context;
 	private MemoizingSupplier<Launch> launch;
 
 	/**
 	 * Constructor: Instantiate a parallel running handler
 	 *
-	 * @param suitesKeeper           test collection hierarchy processor
 	 * @param parallelRunningContext test execution context manager
 	 * @param reportPortalService    Report Portal web service client
 	 */
