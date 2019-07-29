@@ -63,3 +63,9 @@ test {
 wrapper {
     gradleVersion = '5.4.1'
 }
+
+release {
+    git {
+        requireBranch = 'v5-beta'
+    }
+}
