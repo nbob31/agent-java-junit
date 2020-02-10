@@ -205,7 +205,7 @@ public class ParallelRunningHandler implements IListenerHandler {
 	 */
 	@Override
 	public void handleTestSkip(AtomicTest<FrameworkMethod> testContext) {
-		StartTestItemRQ startRQ = buildStartStepRq(testContext.getIdentity());
+		StartTestItemRQ startRQ = buildStartStepRq(testContext);
 		getTestCaseId(testContext.getIdentity(), testContext.getRunner(), startRQ.getCodeRef()).ifPresent(entry -> {
 			startRQ.setTestCaseId(entry.getId());
 			startRQ.setTestCaseHash(entry.getHash());
@@ -363,6 +363,18 @@ public class ParallelRunningHandler implements IListenerHandler {
 	/**
 	 * Extension point to customize test step creation event/request
 	 *
+	 * @param context JUnit framework test context
+	 * @return Request to ReportPortal
+	 */
+	protected StartTestItemRQ buildStartStepRq(AtomicTest<FrameworkMethod> context) {
+		StartTestItemRQ rq = buildStartStepRq(context.getIdentity());
+		rq.setRetry(isRetry(context));
+		return rq;
+	}
+
+	/**
+	 * Extension point to customize test step creation event/request
+	 *
 	 * @param method JUnit framework method context
 	 * @return Request to ReportPortal
 	 */
@@ -376,8 +388,6 @@ public class ParallelRunningHandler implements IListenerHandler {
 		rq.setStartTime(Calendar.getInstance().getTime());
 		MethodType type = MethodType.detect(method);
 		rq.setType(type == null ? "" : type.name());
-
-		rq.setRetry(isRetry(method));
 		return rq;
 	}
 
@@ -554,11 +564,11 @@ public class ParallelRunningHandler implements IListenerHandler {
 	/**
 	 * Determine if the specified JUnit framework method is being retried.
 	 *
-	 * @param method JUnit framework method context
+	 * @param context JUnit framework test context
 	 * @return {@code true} if specified method is being retried; otherwise {@code false}
 	 */
-	private static boolean isRetry(FrameworkMethod method) {
-		return (null != method.getAnnotation(RetriedTest.class));
+	private static boolean isRetry(AtomicTest<FrameworkMethod> context) {
+		return (null != context.getDescription().getAnnotation(RetriedTest.class));
 	}
 
 	/**
