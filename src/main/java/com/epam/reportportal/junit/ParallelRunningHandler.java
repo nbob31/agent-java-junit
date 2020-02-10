@@ -41,7 +41,6 @@ import org.junit.runners.Suite;
 import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.TestClass;
 import rp.com.google.common.annotations.VisibleForTesting;
-import rp.com.google.common.base.Function;
 import rp.com.google.common.base.Supplier;
 
 import java.io.Serializable;
@@ -50,6 +49,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.function.Function;
 
 import static com.epam.reportportal.junit.ParallelRunningContext.ITEM_TREE;
 import static com.epam.reportportal.junit.utils.ItemTreeUtils.createItemTreeKey;
